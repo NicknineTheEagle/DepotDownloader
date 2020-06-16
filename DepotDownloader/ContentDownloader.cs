@@ -472,6 +472,7 @@ namespace DepotDownloader
             if ( steam3 != null )
                 steam3.RequestAppInfo( appId );
 
+            /*
             if ( !AccountHasAccess( appId ) )
             {
                 if ( steam3.RequestFreeAppLicense( appId ) )
@@ -487,6 +488,7 @@ namespace DepotDownloader
                     throw new ContentDownloaderException( String.Format( "App {0} ({1}) is not available from this account.", appId, contentName ) );
                 }
             }
+            */
 
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
@@ -606,10 +608,18 @@ namespace DepotDownloader
 
             string contentName = GetAppOrDepotName( depotId, appId );
 
+            /*
             if ( !AccountHasAccess( depotId ) )
             {
                 Console.WriteLine( "Depot {0} ({1}) is not available from this account.", depotId, contentName );
 
+                return null;
+            }
+            */
+
+            if ( !DepotKeyStore.ContainsKey( depotId ) && !AccountHasAccess( depotId ) )
+            {
+                Console.WriteLine( "Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName );
                 return null;
             }
 
@@ -639,17 +649,27 @@ namespace DepotDownloader
                 return null;
             }
 
-            steam3.RequestDepotKey( depotId, appId );
-            if ( !steam3.DepotKeys.ContainsKey( depotId ) )
-            {
-                Console.WriteLine( "No valid depot key for {0}, unable to download.", depotId );
-                return null;
-            }
+            byte[] depotKey;
 
-            byte[] depotKey = steam3.DepotKeys[ depotId ];
+            if ( DepotKeyStore.ContainsKey( depotId ) )
+            {
+                depotKey = DepotKeyStore.Get( depotId );
+            }
+            else
+            {
+                steam3.RequestDepotKey( depotId, appId );
+                if ( !steam3.DepotKeys.ContainsKey( depotId ) )
+                {
+                    Console.WriteLine( "No valid depot key for {0}, unable to download.", depotId );
+                    return null;
+                }
+                depotKey = steam3.DepotKeys[depotId];
+            }
 
             var info = new DepotDownloadInfo( depotId, manifestId, installDir, contentName );
             info.depotKey = depotKey;
+
+            //File.WriteAllText( String.Format( "depots\\{0}.key", depotId ), BitConverter.ToString( depotKey ).Replace( "-", "" ) );
             return info;
         }
 

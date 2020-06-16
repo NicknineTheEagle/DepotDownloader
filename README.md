@@ -1,4 +1,11 @@
-DepotDownloader
+DepotDownloader fork
+===============
+
+* added support for loading depot keys from a file (with -depotkeys commandline option)
+* changed the resulting directory structure
+
+
+DepotDownloader original readme
 ===============
 
 Steam depot downloader utilizing the SteamKit2 library. Supports .NET Core 2.0

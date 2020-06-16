@@ -155,6 +155,9 @@ namespace DepotDownloader
 
         public async Task<string> AuthenticateConnection(uint appId, uint depotId, CDNClient.Server server)
         {
+            if (DepotKeyStore.ContainsKey(depotId))
+                return null;
+
             var host = steamSession.ResolveCDNTopLevelHost(server.Host);
             var cdnKey = $"{depotId:D}:{host}";
 
