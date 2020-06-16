@@ -124,8 +124,10 @@ namespace DepotDownloader
 
             #endregion
 
+            ContentDownloader.Config.DownloadDepotOnly = HasParameter( args, "-depot-only" );
+
             uint appId = GetParameter<uint>( args, "-app", ContentDownloader.INVALID_APP_ID );
-            if ( appId == ContentDownloader.INVALID_APP_ID )
+            if ( appId == ContentDownloader.INVALID_APP_ID && !ContentDownloader.Config.DownloadDepotOnly )
             {
                 Console.WriteLine( "Error: -app not specified!" );
                 return 1;
@@ -253,11 +255,29 @@ namespace DepotDownloader
                     depotManifestIds.AddRange( depotIdList.Select( depotId => ( depotId, ContentDownloader.INVALID_MANIFEST_ID ) ) );
                 }
 
+                if ( ContentDownloader.Config.DownloadDepotOnly )
+                {
+                    if ( depotIdList.Count == 0 ||
+                        manifestIdList.Count == 0 ||
+                        depotKeysList == null )
+                    {
+                        Console.WriteLine( "Error: -depot-only requires -depot, -manifest and -depotkeys to be specified" );
+                        return 1;
+                    }
+                }
+
                 if ( InitializeSteam( username, password ) )
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync( appId, depotManifestIds, branch, os, arch, language, lv, isUGC ).ConfigureAwait( false );
+                        if ( ContentDownloader.Config.DownloadDepotOnly )
+                        {
+                            await ContentDownloader.DownloadDepotAsync( depotManifestIds ).ConfigureAwait( false );
+                        }
+                        else
+                        {
+                            await ContentDownloader.DownloadAppAsync( appId, depotManifestIds, branch, os, arch, language, lv, isUGC ).ConfigureAwait( false );
+                        }
                     }
                     catch ( Exception ex ) when (
                         ex is ContentDownloaderException
