@@ -1,8 +1,9 @@
 DepotDownloader fork
 ===============
 
-* added support for loading depot keys from a file (with -depotkeys commandline option)
-* changed the resulting directory structure
+* added support for loading depot keys from a file (-depotkeys parameter)
+* added support for loading app tokens from a file (-apptokens parameter)
+* added the ability to download a specific manifest directly without using app info (-depot-only parameter)
 
 
 DepotDownloader original readme
