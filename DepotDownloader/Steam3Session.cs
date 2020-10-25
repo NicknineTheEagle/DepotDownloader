@@ -169,13 +169,19 @@ namespace DepotDownloader
             if ( ( AppInfo.ContainsKey( appId ) && !bForce ) || bAborted )
                 return;
 
+            var localToken = AppTokenStore.Get( appId );
+
             bool completed = false;
             Action<SteamApps.PICSTokensCallback> cbMethodTokens = ( appTokens ) =>
             {
                 completed = true;
                 if ( appTokens.AppTokensDenied.Contains( appId ) )
                 {
-                    Console.WriteLine( "Insufficient privileges to get access token for app {0}", appId );
+                    //Console.WriteLine( "Insufficient privileges to get access token for app {0}", appId );
+                    if ( localToken == 0 )
+                    {
+                        Console.WriteLine( "Insufficient privileges to get access token for app {0} and no token found in token store.", appId );
+                    }
                 }
 
                 foreach ( var token_dict in appTokens.AppTokens )
@@ -212,6 +218,11 @@ namespace DepotDownloader
             if ( AppTokens.ContainsKey( appId ) )
             {
                 request.AccessToken = AppTokens[ appId ];
+                request.Public = false;
+            }
+            else if ( localToken != 0 )
+            {
+                request.AccessToken = localToken;
                 request.Public = false;
             }
 

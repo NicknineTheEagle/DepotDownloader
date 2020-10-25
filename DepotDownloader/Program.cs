@@ -86,6 +86,20 @@ namespace DepotDownloader
                 }
             }
 
+            string appTokensList = GetParameter<string>( args, "-apptokens" );
+            if ( appTokensList != null )
+            {
+                try
+                {
+                    AppTokenStore.LoadFromFile( appTokensList );
+                    Console.WriteLine( "Using app tokens from '{0}'.", appTokensList );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( "Warning: Unable to load file: {0}", ex.ToString() );
+                }
+            }
+
             string depotKeysList = GetParameter<string>( args, "-depotkeys" );
             if ( depotKeysList != null )
             {
