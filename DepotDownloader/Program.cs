@@ -134,6 +134,20 @@ namespace DepotDownloader
                 }
             }
 
+            var depotKeysList = GetParameter<string>(args, "-depotkeys");
+            if (depotKeysList != null)
+            {
+                try
+                {
+                    DepotKeyStore.LoadFromFile(depotKeysList);
+                    Console.WriteLine("Using depot keys from '{0}'.", depotKeysList);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Warning: Unable to load file: {0}", ex.ToString());
+                }
+            }
+
             ContentDownloader.Config.InstallDirectory = GetParameter<string>(args, "-dir");
 
             ContentDownloader.Config.VerifyAll = HasParameter(args, "-verify-all") || HasParameter(args, "-verify_all") || HasParameter(args, "-validate");
