@@ -145,9 +145,11 @@ namespace DepotDownloader
             if ((AppInfo.ContainsKey(appId) && !bForce) || bAborted)
                 return;
 
+            var localToken = AppTokenStore.Get(appId);
+
             var appTokens = await steamApps.PICSGetAccessTokens([appId], []);
 
-            if (appTokens.AppTokensDenied.Contains(appId))
+            if (localToken == 0 && appTokens.AppTokensDenied.Contains(appId))
             {
                 Console.WriteLine("Insufficient privileges to get access token for app {0}", appId);
             }
@@ -162,6 +164,10 @@ namespace DepotDownloader
             if (AppTokens.TryGetValue(appId, out var token))
             {
                 request.AccessToken = token;
+            }
+            else if (localToken != 0)
+            {
+                request.AccessToken = localToken;
             }
 
             var appInfoMultiple = await steamApps.PICSGetProductInfo([request], []);
