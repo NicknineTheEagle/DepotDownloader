@@ -427,6 +427,7 @@ namespace DepotDownloader
 
             await steam3?.RequestAppInfo(appId);
 
+            /*
             if (!await AccountHasAccess(appId, appId))
             {
                 if (await steam3.RequestFreeAppLicense(appId))
@@ -442,6 +443,7 @@ namespace DepotDownloader
                     throw new ContentDownloaderException(string.Format("App {0} ({1}) is not available from this account.", appId, contentName));
                 }
             }
+            */
 
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
@@ -564,10 +566,18 @@ namespace DepotDownloader
                 await steam3.RequestAppInfo(appId);
             }
 
+            /*
             if (!await AccountHasAccess(appId, depotId))
             {
                 Console.WriteLine("Depot {0} is not available from this account.", depotId);
 
+                return null;
+            }
+            */
+
+            if (!DepotKeyStore.ContainsKey(depotId) && !await AccountHasAccess(appId, depotId))
+            {
+                Console.WriteLine("Depot {0} is not available from this account and no key found in depot key store.", depotId);
                 return null;
             }
 
@@ -588,11 +598,20 @@ namespace DepotDownloader
                 }
             }
 
-            await steam3.RequestDepotKey(depotId, appId);
-            if (!steam3.DepotKeys.TryGetValue(depotId, out var depotKey))
+            byte[] depotKey;
+
+            if (DepotKeyStore.ContainsKey(depotId))
             {
-                Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
-                return null;
+                depotKey = DepotKeyStore.Get(depotId);
+            }
+            else
+            {
+                await steam3.RequestDepotKey(depotId, appId);
+                if (!steam3.DepotKeys.TryGetValue(depotId, out depotKey))
+                {
+                    Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
+                    return null;
+                }
             }
 
             var uVersion = GetSteam3AppBuildNumber(appId, branch);
