@@ -377,6 +377,65 @@ namespace DepotDownloader
             }
         }
 
+        public static async Task DownloadDepotAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds)
+        {
+            cdnPool = new CDNClientPool(steam3, appId);
+
+            // Load our configuration data containing the depots currently installed
+            var configPath = ContentDownloader.Config.InstallDirectory;
+            if (string.IsNullOrWhiteSpace(configPath))
+            {
+                configPath = DEFAULT_DOWNLOAD_DIR;
+            }
+
+            Directory.CreateDirectory(Path.Combine(configPath, CONFIG_DIR));
+            DepotConfigStore.LoadFromFile(Path.Combine(configPath, CONFIG_DIR, "depot.config"));
+
+            var infos = new List<DepotDownloadInfo>();
+
+            foreach (var depotManifest in depotManifestIds)
+            {
+                var depotId = depotManifest.depotId;
+                var manifestId = depotManifest.manifestId;
+
+                string installDir;
+                if (!CreateDirectories(depotId, 0, out installDir))
+                {
+                    throw new ContentDownloaderException("Error: Unable to create install directories!");
+                }
+
+                byte[] depotKey = null;
+
+                if (DepotKeyStore.ContainsKey(depotId))
+                {
+                    depotKey = DepotKeyStore.Get(depotId);
+                }
+                else if (appId != INVALID_APP_ID)
+                {
+                    await steam3.RequestDepotKey(depotId, appId);
+                    steam3.DepotKeys.TryGetValue(depotId, out depotKey);
+                }
+
+                if (depotKey == null)
+                {
+                    throw new ContentDownloaderException(String.Format("Key for depot {0} is not in depot store and cannot be fetched from servers.", depotId));
+                }
+
+                var info = new DepotDownloadInfo(depotId, appId, manifestId, "", installDir, depotKey);
+                infos.Add(info);
+            }
+
+            try
+            {
+                await DownloadSteam3Async(infos).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Depots were not completely downloaded.");
+                throw;
+            }
+        }
+
         private static async Task DownloadWebFile(uint appId, string fileName, string url)
         {
             if (!CreateDirectories(appId, 0, out var installDir))
