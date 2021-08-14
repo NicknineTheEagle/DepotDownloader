@@ -361,6 +361,55 @@ namespace DepotDownloader
             }
         }
 
+        public static async Task DownloadDepotAsync(List<(uint depotId, ulong manifestId)> depotManifestIds)
+        {
+            cdnPool = new CDNClientPool(steam3, INVALID_APP_ID);
+
+            // Load our configuration data containing the depots currently installed
+            var configPath = ContentDownloader.Config.InstallDirectory;
+            if (string.IsNullOrWhiteSpace(configPath))
+            {
+                configPath = DEFAULT_DOWNLOAD_DIR;
+            }
+
+            Directory.CreateDirectory(Path.Combine(configPath, CONFIG_DIR));
+            DepotConfigStore.LoadFromFile(Path.Combine(configPath, CONFIG_DIR, "depot.config"));
+
+            var infos = new List<DepotDownloadInfo>();
+
+            foreach (var depotManifest in depotManifestIds)
+            {
+                var depotId = depotManifest.depotId;
+                var manifestId = depotManifest.manifestId;
+
+                string installDir;
+                if (!CreateDirectories(depotId, 0, out installDir))
+                {
+                    throw new ContentDownloaderException("Error: Unable to create install directories!");
+                }
+
+                if (!DepotKeyStore.ContainsKey(depotId))
+                {
+                    throw new ContentDownloaderException(String.Format("Error: Depot key for {0} was not found in the key store!", depotId));
+                }
+
+                var depotKey = DepotKeyStore.Get(depotId);
+
+                var info = new DepotDownloadInfo(depotId, 0, manifestId, "", installDir, depotKey);
+                infos.Add(info);
+            }
+
+            try
+            {
+                await DownloadSteam3Async(infos).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Depots were not completely downloaded.");
+                throw;
+            }
+        }
+
         private static async Task DownloadWebFile(uint appId, string fileName, string url)
         {
             if (!CreateDirectories(appId, 0, out var installDir))
