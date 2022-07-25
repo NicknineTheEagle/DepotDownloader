@@ -136,6 +136,7 @@ namespace DepotDownloader
             #endregion
 
             ContentDownloader.Config.DownloadDepotOnly = HasParameter(args, "-depot-only");
+            ContentDownloader.Config.ManifestDirectory = GetParameter<string>(args, "-manifest-dir");
 
             var appId = GetParameter<uint>(args, "-app", ContentDownloader.INVALID_APP_ID);
             if (appId == ContentDownloader.INVALID_APP_ID && !ContentDownloader.Config.DownloadDepotOnly)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -814,6 +815,38 @@ namespace DepotDownloader
                     }
                 }
 
+                if (newProtoManifest == null && !string.IsNullOrWhiteSpace(Config.ManifestDirectory))
+                {
+                    var cachePath = Path.Combine(Config.ManifestDirectory, string.Format("{0}_{1}.manifest", depot.DepotId, depot.ManifestId));
+                    if (File.Exists(cachePath))
+                    {
+                        var manifestData = File.ReadAllBytes(cachePath);
+                        if (manifestData[0] == 'P' && manifestData[1] == 'K')
+                        {
+                            byte[] uncompressedData;
+                            using (var ms = new MemoryStream(manifestData))
+                            using (var archive = new ZipArchive(ms))
+                            {
+                                using (var ms_entry = new MemoryStream())
+                                {
+                                    archive.GetEntry("z").Open().CopyTo(ms_entry);
+                                    uncompressedData = ms_entry.ToArray();
+                                }
+                            }
+
+                            manifestData = uncompressedData;
+                        }
+                        var depotManifest = DepotManifest.Deserialize(manifestData);
+                        depotManifest.DecryptFilenames(depot.DepotKey);
+
+                        byte[] checksum;
+
+                        newProtoManifest = new ProtoManifest(depotManifest, depot.ManifestId);
+                        newProtoManifest.SaveToFile(newManifestFileName, out checksum);
+                        File.WriteAllBytes(newManifestFileName + ".sha", checksum);
+                    }
+                }
+
                 if (newProtoManifest != null)
                 {
                     Console.WriteLine("Already have manifest {0} for depot {1}.", depot.ManifestId, depot.DepotId);
@@ -854,7 +887,7 @@ namespace DepotDownloader
                                 if (manifestRequestCode == 0)
                                 {
                                     Console.WriteLine("No manifest request code was returned for {0} {1}", depot.DepotId, depot.ManifestId);
-                                    cts.Cancel();
+                                    break;
                                 }
                             }
 
