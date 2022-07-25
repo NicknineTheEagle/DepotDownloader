@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -184,6 +185,34 @@ namespace DepotDownloader
                 if (oldManifest != null)
                 {
                     return oldManifest.ConvertToSteamManifest(depotId);
+                }
+            }
+
+            // Try local manifest storage.
+            if (!string.IsNullOrWhiteSpace(ContentDownloader.Config.ManifestDirectory) && DepotKeyStore.ContainsKey(depotId))
+            {
+                var cachePath = Path.Combine(ContentDownloader.Config.ManifestDirectory, string.Format("{0}_{1}.manifest", depotId, manifestId));
+                if (File.Exists(cachePath))
+                {
+                    var manifestData = File.ReadAllBytes(cachePath);
+                    if (manifestData[0] == 'P' && manifestData[1] == 'K')
+                    {
+                        byte[] uncompressedData;
+                        using (var ms = new MemoryStream(manifestData))
+                        using (var archive = new ZipArchive(ms))
+                        {
+                            using (var ms_entry = new MemoryStream())
+                            {
+                                archive.GetEntry("z").Open().CopyTo(ms_entry);
+                                uncompressedData = ms_entry.ToArray();
+                            }
+                        }
+                        manifestData = uncompressedData;
+                    }
+                    var depotManifest = DepotManifest.Deserialize(manifestData);
+                    depotManifest.DecryptFilenames(DepotKeyStore.Get(depotId));
+                    SaveManifestToFile(directory, depotManifest);
+                    return depotManifest;
                 }
             }
 
