@@ -184,6 +184,7 @@ namespace DepotDownloader
             #endregion
 
             var appId = GetParameter(args, "-app", ContentDownloader.INVALID_APP_ID);
+            ContentDownloader.Config.ManifestDirectory = GetParameter<string>(args, "-manifest-dir");
             if (appId == ContentDownloader.INVALID_APP_ID)
             {
                 Console.WriteLine("Error: -app not specified!");

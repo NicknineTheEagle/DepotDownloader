@@ -1,4 +1,4 @@
-﻿// This file is subject to the terms and conditions defined
+// This file is subject to the terms and conditions defined
 // in file 'LICENSE', which is part of this source code package.
 
 using System.Collections.Generic;
@@ -13,6 +13,7 @@ namespace DepotDownloader
         public bool DownloadAllArchs { get; set; }
         public bool DownloadAllLanguages { get; set; }
         public bool DownloadManifestOnly { get; set; }
+        public string ManifestDirectory { get; set; }
         public string InstallDirectory { get; set; }
 
         public bool UsingFileList { get; set; }
