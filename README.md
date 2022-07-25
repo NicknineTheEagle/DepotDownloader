@@ -1,4 +1,13 @@
-DepotDownloader
+DepotDownloader fork
+===============
+
+* added support for loading depot keys from a file (-depotkeys parameter)
+* added support for loading app tokens from a file (-apptokens parameter)
+* added the ability to download a specific manifest directly without using app info (-depot-only parameter)
+* added the ability to load manifests from a local directory (-manifest-dir parameter)
+
+
+DepotDownloader original readme
 ===============
 
 Steam depot downloader utilizing the SteamKit2 library. Supports .NET 8.0
