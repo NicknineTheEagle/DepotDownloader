@@ -362,9 +362,9 @@ namespace DepotDownloader
             }
         }
 
-        public static async Task DownloadDepotAsync(List<(uint depotId, ulong manifestId)> depotManifestIds)
+        public static async Task DownloadDepotAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds)
         {
-            cdnPool = new CDNClientPool(steam3, INVALID_APP_ID);
+            cdnPool = new CDNClientPool(steam3, appId);
 
             // Load our configuration data containing the depots currently installed
             var configPath = ContentDownloader.Config.InstallDirectory;
@@ -389,14 +389,27 @@ namespace DepotDownloader
                     throw new ContentDownloaderException("Error: Unable to create install directories!");
                 }
 
-                if (!DepotKeyStore.ContainsKey(depotId))
+                byte[] depotKey = null;
+
+                if (DepotKeyStore.ContainsKey(depotId))
                 {
-                    throw new ContentDownloaderException(String.Format("Error: Depot key for {0} was not found in the key store!", depotId));
+                    depotKey = DepotKeyStore.Get(depotId);
+                }
+                else if (appId != INVALID_APP_ID)
+                {
+                    steam3.RequestDepotKey(depotId, appId);
+                    if (steam3.DepotKeys.ContainsKey(depotId))
+                    {
+                        depotKey = steam3.DepotKeys[depotId];
+                    }
                 }
 
-                var depotKey = DepotKeyStore.Get(depotId);
+                if (depotKey == null)
+                {
+                    throw new ContentDownloaderException(String.Format("Key for depot {0} is not in depot store and cannot be fetched from servers.", depotId));
+                }
 
-                var info = new DepotDownloadInfo(depotId, 0, manifestId, "", installDir, depotKey);
+                var info = new DepotDownloadInfo(depotId, appId, manifestId, "", installDir, depotKey);
                 infos.Add(info);
             }
 

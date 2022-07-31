@@ -271,9 +271,9 @@ namespace DepotDownloader
                 {
                     if (depotIdList.Count == 0 ||
                         manifestIdList.Count == 0 ||
-                        depotKeysList == null)
+                        (appId == ContentDownloader.INVALID_APP_ID && depotKeysList == null))
                     {
-                        Console.WriteLine("Error: -depot-only requires -depot, -manifest and -depotkeys to be specified");
+                        Console.WriteLine("Error: -depot-only requires -depot, -manifest and either -app or -depotkeys to be specified");
                         return 1;
                     }
                 }
@@ -284,7 +284,7 @@ namespace DepotDownloader
                     {
                         if (ContentDownloader.Config.DownloadDepotOnly)
                         {
-                            await ContentDownloader.DownloadDepotAsync(depotManifestIds).ConfigureAwait(false);
+                            await ContentDownloader.DownloadDepotAsync(appId, depotManifestIds).ConfigureAwait(false);
                         }
                         else
                         {
