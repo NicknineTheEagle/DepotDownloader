@@ -123,6 +123,66 @@ namespace DepotDownloader
             }
         }
 
+        public static string FindLocalManifest(string manifestDir, uint depotId, ulong manifestId)
+        {
+            var cachePath = Path.Combine(manifestDir,
+                string.Format("{0}_{1}.manifest", depotId, manifestId));
+            if (File.Exists(cachePath))
+                return cachePath;
+
+            cachePath = Path.Combine(manifestDir,
+                string.Format("{0}.manif5", manifestId));
+            if (File.Exists(cachePath))
+                return cachePath;
+
+            cachePath = Path.Combine(manifestDir,
+                string.Format("{0}_{1}.manif5", depotId, manifestId));
+            if (File.Exists(cachePath))
+                return cachePath;
+
+            cachePath = Path.Combine(manifestDir,
+                depotId.ToString(),
+                "manifest",
+                string.Format("{0}.manif5", manifestId));
+            if (File.Exists(cachePath))
+                return cachePath;
+
+            return null;
+        }
+
+        public static DepotManifest LoadLocalManifest(string directory, uint depotId, ulong manifestId)
+        {
+            if (string.IsNullOrWhiteSpace(ContentDownloader.Config.ManifestDirectory) || !DepotKeyStore.ContainsKey(depotId))
+                return null;
+
+            var cachePath = FindLocalManifest(ContentDownloader.Config.ManifestDirectory, depotId, manifestId);
+
+            if (cachePath != null)
+            {
+                var manifestData = File.ReadAllBytes(cachePath);
+                if (manifestData[0] == 'P' && manifestData[1] == 'K')
+                {
+                    byte[] uncompressedData;
+                    using (var ms = new MemoryStream(manifestData))
+                    using (var archive = new ZipArchive(ms))
+                    {
+                        using (var ms_entry = new MemoryStream())
+                        {
+                            archive.GetEntry("z").Open().CopyTo(ms_entry);
+                            uncompressedData = ms_entry.ToArray();
+                        }
+                    }
+                    manifestData = uncompressedData;
+                }
+                var depotManifest = DepotManifest.Deserialize(manifestData);
+                depotManifest.DecryptFilenames(DepotKeyStore.Get(depotId));
+                SaveManifestToFile(directory, depotManifest);
+                return depotManifest;
+            }
+
+            return null;
+        }
+
         public static DepotManifest LoadManifestFromFile(string directory, uint depotId, ulong manifestId, bool badHashWarning)
         {
             // Try loading Steam format manifest first.
@@ -189,31 +249,10 @@ namespace DepotDownloader
             }
 
             // Try local manifest storage.
-            if (!string.IsNullOrWhiteSpace(ContentDownloader.Config.ManifestDirectory) && DepotKeyStore.ContainsKey(depotId))
+            var localManifest = LoadLocalManifest(directory, depotId, manifestId);
+            if (localManifest != null)
             {
-                var cachePath = Path.Combine(ContentDownloader.Config.ManifestDirectory, string.Format("{0}_{1}.manifest", depotId, manifestId));
-                if (File.Exists(cachePath))
-                {
-                    var manifestData = File.ReadAllBytes(cachePath);
-                    if (manifestData[0] == 'P' && manifestData[1] == 'K')
-                    {
-                        byte[] uncompressedData;
-                        using (var ms = new MemoryStream(manifestData))
-                        using (var archive = new ZipArchive(ms))
-                        {
-                            using (var ms_entry = new MemoryStream())
-                            {
-                                archive.GetEntry("z").Open().CopyTo(ms_entry);
-                                uncompressedData = ms_entry.ToArray();
-                            }
-                        }
-                        manifestData = uncompressedData;
-                    }
-                    var depotManifest = DepotManifest.Deserialize(manifestData);
-                    depotManifest.DecryptFilenames(DepotKeyStore.Get(depotId));
-                    SaveManifestToFile(directory, depotManifest);
-                    return depotManifest;
-                }
+                return localManifest;
             }
 
             return null;
